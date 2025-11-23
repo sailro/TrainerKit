@@ -11,7 +11,7 @@ TrainerKit simplifies the development of internal Unity trainers by handling:
 
 ## Example with Unity's FPS Microgame
 
-Starting with TrainerKit code, simply write the following code:
+Starting with TrainerKit codebase, simply write the following code:
 
 ```csharp
 using TrainerKit.Features;
@@ -129,10 +129,29 @@ ToggleFeature
 TriggerFeature
 ```
 
-4- Compile. If you need extra dependencies, you can either add them in the `Managed` folder of the target game, or ILMerge everything into one unique assembly.
+Decorate your own properties with `ConfigurationPropertyAttribute`. You can finetune the behavior by using dedicated settings:
 
+```csharp
+[AttributeUsage(AttributeTargets.Property)]
+public class ConfigurationPropertyAttribute : Attribute
+{
+	// Skip completely (Rendering+Config), useful when overriding properties
+	public bool Skip { get; set; } = false;
 
-3- Inject your assembly with your favorite Mono injector, for example here with SharpMonoInjector:
+	// Dislay order
+	public int Order { get; set; } = int.MaxValue;
+
+    // Link a resource id for generating comment in the ini file
+	public string CommentResourceId { get; set; } = string.Empty;
+	
+	// Enable/Disable rendering
+	public bool Browsable { get; set; } = true;
+}
+```
+
+3- Compile. If you need extra dependencies, you can either add them in the `Managed` folder of the target game, or ILMerge everything into one unique assembly.
+
+4- Inject your assembly with your favorite Mono injector, for example here with SharpMonoInjector:
 
 ```
 smi inject -p Game -a TrainerKit.dll -n TrainerKit -c Context -m Load

@@ -142,19 +142,18 @@ TrainerKit.dll: 0x0000015162CAE9F0
 Indeed if we have a look at the `TrainerKit.Context.Load` method, we can see the registration logic:
 
 ```csharp
-	public static void Load()
-	{
-		var go = new GameObject(nameof(Context));
-		UnityEngine.Object.DontDestroyOnLoad(go);
-		FeatureFactory.RegisterAllFeatures(go);
+public static void Load()
+{
+	var go = new GameObject(nameof(Context));
+	UnityEngine.Object.DontDestroyOnLoad(go);
+	FeatureFactory.RegisterAllFeatures(go);
 
-		var commands = FeatureFactory.GetFeature<Commands>();
-		if (commands == null)
-			return;
+	var commands = FeatureFactory.GetFeature<Commands>();
+	if (commands == null)
+		return;
 
-		AddConsoleLog(Strings.FeatureRendererWelcome + $" ({commands.Key})");
-	}
+	AddConsoleLog(Strings.FeatureRendererWelcome + $" ({commands.Key})");
+}
 ```
-
 
 If you hit any issue while injecting, make sure you are not missing any dependencies.

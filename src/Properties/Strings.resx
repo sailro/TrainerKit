@@ -179,6 +179,13 @@ Colors are stored as an array of 'RGBA' floats</value>
   <data name="FeatureRendererWelcome" xml:space="preserve">
     <value>Welcome to TrainerKit !</value>
   </data>
+  <data name="InjectorFailure" xml:space="preserve">
+    <value>Error: {0}</value>
+  </data>
+  <data name="InjectorSuccess" xml:space="preserve">
+    <value>Injected {0} into process {1}: {2}</value>
+    <comment>Assembly, process, address</comment>
+  </data>
   <data name="PropertyCacheTimeInSec" xml:space="preserve">
     <value>Cache time (sec)</value>
   </data>

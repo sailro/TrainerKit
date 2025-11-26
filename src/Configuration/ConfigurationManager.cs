@@ -44,7 +44,7 @@ internal static class ConfigurationManager
 						if (line == null)
 							continue;
 
-						var value = JsonConvert.DeserializeObject(line[key.Length..], op.Property.PropertyType, Converters);
+						var value = JsonConvert.DeserializeObject(line.Substring(key.Length), op.Property.PropertyType, Converters);
 						op.Property.SetValue(feature, value);
 					}
 					catch (JsonException)
@@ -108,7 +108,7 @@ internal static class ConfigurationManager
 		const string commentToken = "; ";
 		const string resxNewLine = "\n";
 
-		return commentToken + value.Replace(resxNewLine, resxNewLine + commentToken);
+		return commentToken + value!.Replace(resxNewLine, resxNewLine + commentToken);
 	}
 
 	public static bool IsSkippedProperty(Feature feature, string name)

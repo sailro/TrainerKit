@@ -216,6 +216,24 @@ namespace TrainerKit.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Error: {0}.
+        /// </summary>
+        internal static string InjectorFailure {
+            get {
+                return ResourceManager.GetString("InjectorFailure", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Injected {0} into process {1}: {2}.
+        /// </summary>
+        internal static string InjectorSuccess {
+            get {
+                return ResourceManager.GetString("InjectorSuccess", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Cache time (sec).
         /// </summary>
         internal static string PropertyCacheTimeInSec {

@@ -66,7 +66,7 @@ internal class Commands : FeatureRenderer
 
 		foreach (var property in properties)
 		{
-			var key = property.Name[prefix.Length..];
+			var key = property.Name.Substring(prefix.Length);
 			var value = property.GetValue(null) as string ?? string.Empty;
 
 			PropertyDisplays.Add(key, value);

@@ -1,6 +1,5 @@
 Place here the following assemblies if you want to compile:
 
-Newtonsoft.Json
 UnityEngine
 UnityEngine.CoreModule
 UnityEngine.IMGUIModule

@@ -8,6 +8,7 @@ TrainerKit simplifies the development of internal Unity trainers by handling:
 - UI rendering of features (everything is done automatically through reflection). Support for `Color`, `Float`, `Int`, `String`, `Bool`, `KeyCode` types.
 - Load/save of settings.
 - Runtime execution of Features.
+- Injection into target process.
 
 ## Example with Unity's FPS Microgame
 
@@ -75,7 +76,7 @@ internal class UnlimitedAmmo : ToggleFeature
 }
 ```
 
-and the system will automatically generate the following window (use `RightAlt` by default to display the menu):
+and the system will automatically generate the following window after injecting into the target process (use `RightAlt` by default to display the menu):
 
 ![TrainerKit Demo](./media/trainerkit.png)
 
@@ -84,7 +85,7 @@ Note that the system displays names like `!! [Id] !!` because it couldn't find t
 ![Resources](./media/resources.png)
 
 
-The following configuration file can be also automatically generated (and reloaded on next execution):
+The following configuration file can be automatically generated (and reloaded on next execution):
 
 ```ini
 ; Be careful when updating this file :)
@@ -114,7 +115,6 @@ TrainerKit.Features.Commands.Y=10.0
 1- Starting from the source code, add the necessary references to the game you want to mod. You need at least:
 
 ```text
-Newtonsoft.Json
 UnityEngine
 UnityEngine.CoreModule
 UnityEngine.IMGUIModule
@@ -129,7 +129,7 @@ ToggleFeature
 TriggerFeature
 ```
 
-Decorate your own properties with `ConfigurationPropertyAttribute`. You can finetune the behavior by using dedicated settings:
+Decorate your own properties with `ConfigurationPropertyAttribute`. This will expose your property to rendering and persistence. You can finetune the behavior by using dedicated settings:
 
 ```csharp
 [AttributeUsage(AttributeTargets.Property)]
@@ -149,13 +149,38 @@ public class ConfigurationPropertyAttribute : Attribute
 }
 ```
 
-3- Compile. If you need extra dependencies, you can either add them in the `Managed` folder of the target game, or ILMerge everything into one unique assembly.
+3- Compile. If you need extra dependencies, you can either add them in the `Managed` folder of the target game, or il-merge everything into one unique assembly (we already use `ILRepack` to add a compatible `Newtonsoft.Json` assembly).
 
-4- Inject your assembly with your favorite Mono injector, for example here with SharpMonoInjector:
+4- Run the executable, it will handle the injection into the target process (see `Program.cs` to customize the target):
+
+```csharp
+public static void Main()
+{
+	try
+	{
+		var location = Assembly.GetEntryAssembly()!.Location;
+		var bytes = File.ReadAllBytes(location);
+
+		const string processName = "TODO";
+		using var injector = new Injector(processName);
+		var intptr = injector.Inject(bytes, typeof(Context).Namespace, nameof(Context), nameof(Context.Load));
+
+		Console.WriteLine(
+			Strings.InjectorSuccess,
+			Path.GetFileName(location),
+			processName,
+			injector.Is64Bit ? $"0x{intptr.ToInt64():X16}" : $"0x{intptr.ToInt32):X8}");
+	}
+	catch (Exception e)
+	{
+		Console.WriteLine(Strings.InjectorFailure, e.Message);
+	}
+}
+```
+Here is the output, but you can still use your preferred Mono injector.
 
 ```
-smi inject -p Game -a TrainerKit.dll -n TrainerKit -c Context -m Load
-TrainerKit.dll: 0x0000015162CAE9F0
+Injected TrainerKit.exe into process FPS: 0x000002B0E9099380
 ```
 
 Indeed if we have a look at the `TrainerKit.Context.Load` method, we can see the registration logic:
@@ -176,3 +201,21 @@ public static void Load()
 ```
 
 If you hit any issue while injecting, make sure you are not missing any dependencies.
+
+## Trainers using TrainerKit
+
+- [EscapeFromTarkov-Trainer](https://github.com/sailro/EscapeFromTarkov-Trainer) for [Escape From Tarkov](https://www.escapefromtarkov.com/) game. *Before switching to IL2CPP*.
+  - No `ILRepacking`: specific `BepInEx` injector, and `NewtonSoft.Json` types are directly provided by the game assemblies. Compiled for netfx `4.7.1`
+  - Using Unity `2022.3.43f1`.
+
+- [IronCast-Trainer](https://github.com/sailro/Ironcast-Trainer) for [IronCast](http://store.steampowered.com/app/327670/) game.
+  - No `ILRepacking`: standalone `SharpMonoInjector`, and `NewtonSoft.Json` types are directly provided by the game assemblies.
+  - Using Unity `4.6.1f1`, so compiled for netfx `3.5`, requiring minor code adaptations.
+
+- [YAZDHD-Trainer]() for  [Yet Another Zombie Defense HD](https://store.steampowered.com/app/674750/Yet_Another_Zombie_Defense_HD) game.
+  - `ILRepacking` to provide `SharpMonoInjector` as a built-in injector, and `NewtonSoft.Json` types internalized. Compiled for netfx `4.8.1`.
+  - Using Unity `2019.4.13f1`.
+
+- The demo Unity's FPS Microgame used here.
+  - `ILRepacking` to provide `SharpMonoInjector` as a built-in injector, and `NewtonSoft.Json` types internalized. Compiled for netfx `4.8.1`.
+  - Using Unity `2022.3.62f3`.

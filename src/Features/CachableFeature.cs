@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using TrainerKit.Configuration;
 using JetBrains.Annotations;
+using TrainerKit.Configuration;
 using UnityEngine;
 
 #nullable enable

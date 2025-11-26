@@ -3,10 +3,10 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using TrainerKit.Features;
-using TrainerKit.Properties;
 using Newtonsoft.Json;
 using TrainerKit.Extensions;
+using TrainerKit.Features;
+using TrainerKit.Properties;
 
 #nullable enable
 

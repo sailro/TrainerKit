@@ -1,5 +1,5 @@
-﻿using TrainerKit.Configuration;
-using JetBrains.Annotations;
+﻿using JetBrains.Annotations;
+using TrainerKit.Configuration;
 using UnityEngine;
 
 #nullable enable

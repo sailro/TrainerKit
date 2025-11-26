@@ -212,7 +212,7 @@ If you hit any issue while injecting, make sure you are not missing any dependen
   - No `ILRepacking`: standalone `SharpMonoInjector`, and `NewtonSoft.Json` types are directly provided by the game assemblies.
   - Using Unity `4.6.1f1`, so compiled for netfx `3.5`, requiring minor code adaptations.
 
-- [YAZDHD-Trainer]() for  [Yet Another Zombie Defense HD](https://store.steampowered.com/app/674750/Yet_Another_Zombie_Defense_HD) game.
+- [YAZDHD-Trainer](https://github.com/sailro/YAZDHD-Trainer) for  [Yet Another Zombie Defense HD](https://store.steampowered.com/app/674750/Yet_Another_Zombie_Defense_HD) game.
   - `ILRepacking` to provide `SharpMonoInjector` as a built-in injector, and `NewtonSoft.Json` types internalized. Compiled for netfx `4.8.1`.
   - Using Unity `2019.4.13f1`.
 

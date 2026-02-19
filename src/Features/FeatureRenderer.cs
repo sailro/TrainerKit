@@ -446,8 +446,7 @@ internal abstract class FeatureRenderer : ToggleFeature
 				break;
 
 			case nameof(Int32):
-				if (int.TryParse(GUI.TextField(rect, currentValue.ToString()), out var intVal))
-					newValue = intVal;
+				newValue = RenderIntControl(rect, currentValue, controlName);
 				break;
 
 			case nameof(Color):
@@ -460,7 +459,7 @@ internal abstract class FeatureRenderer : ToggleFeature
 				break;
 
 			case nameof(String):
-				newValue = GUI.TextField(rect, currentValue.ToString());
+				newValue = Il2CppTextField(rect, currentValue.ToString(), controlName);
 				break;
 
 			default:
@@ -478,31 +477,110 @@ internal abstract class FeatureRenderer : ToggleFeature
 			   && !focused.EndsWith($"-{context.ContextType}");
 	}
 
-	private static object RenderFloatControl(Rect rect, object currentValue, string controlName)
+	private static readonly Color RedColor = new Color(1f, 0f, 0f, 1f);
+
+	// GUI.TextField is stripped in IL2CPP — custom text input using keyboard events
+	private static string? _activeControlName;
+
+	private static GUIStyle? _textFieldStyle;
+	private static GUIStyle TextFieldStyle
 	{
-		const string decimalSeparator = ".";
-		const string altDecimalSeparator = ",";
-
-		var culture = CultureInfo.InvariantCulture;
-		var newValue = currentValue;
-
-		if (!ControlValues.TryGetValue(controlName, out var controlText))
-			controlText = currentValue.ToString();
-
-		if (controlText != currentValue.ToString())
-			GUI.backgroundColor = Color.red;
-
-		controlText = GUI
-			.TextField(rect, controlText)
-			.Replace(altDecimalSeparator, decimalSeparator);
-
-		if (!controlText.EndsWith(decimalSeparator) && float.TryParse(controlText, NumberStyles.Float, culture, out var floatValue))
+		get
 		{
-			newValue = floatValue;
-			controlText = newValue.ToString();
+			if (_textFieldStyle == null)
+			{
+				_textFieldStyle = new GUIStyle();
+				_textFieldStyle.normal.textColor = new Color(0.9f, 0.9f, 0.9f, 1f);
+				_textFieldStyle.fontSize = 12;
+				_textFieldStyle.alignment = TextAnchor.MiddleLeft;
+				_textFieldStyle.padding.left = 4;
+				_textFieldStyle.padding.right = 4;
+			}
+			return _textFieldStyle;
+		}
+	}
+
+	private string Il2CppTextField(Rect rect, string text, string controlName)
+	{
+		bool isActive = _activeControlName == controlName;
+		if (!ControlValues.TryGetValue(controlName, out var editText))
+			editText = text;
+
+		// Draw semi-transparent background
+		var tmp = GUI.backgroundColor;
+		GUI.backgroundColor = isActive ? new Color(1f, 1f, 1f, 0.3f) : new Color(1f, 1f, 1f, 0.15f);
+		GUI.Box(rect, string.Empty);
+		GUI.backgroundColor = tmp;
+
+		// Draw text
+		GUI.Label(rect, isActive ? editText + "|" : editText, TextFieldStyle);
+
+		var evt = Event.current;
+
+		// Click to activate — also close any open pickers
+		if (evt.type == EventType.MouseDown && evt.button == 0)
+		{
+			if (RectContains(rect, evt.mousePosition))
+			{
+				_activeControlName = controlName;
+				_selectionContexts.Clear();
+				ControlValues[controlName] = editText;
+				evt.Use();
+			}
+			else if (isActive)
+			{
+				_activeControlName = null;
+			}
 		}
 
-		ControlValues[controlName] = controlText;
-		return newValue;
+		// Handle keyboard input when active
+		if (isActive && evt.type == EventType.KeyDown)
+		{
+			if (evt.keyCode == KeyCode.Return || evt.keyCode == KeyCode.KeypadEnter)
+			{
+				_activeControlName = null;
+				evt.Use();
+			}
+			else if (evt.keyCode == KeyCode.Escape)
+			{
+				ControlValues[controlName] = text;
+				_activeControlName = null;
+				evt.Use();
+				return text;
+			}
+			else if (evt.keyCode == KeyCode.Backspace)
+			{
+				if (editText.Length > 0)
+					editText = editText.Substring(0, editText.Length - 1);
+				ControlValues[controlName] = editText;
+				evt.Use();
+			}
+			else if (evt.character != 0 && evt.character != '\n' && evt.character != '\r')
+			{
+				editText += evt.character;
+				ControlValues[controlName] = editText;
+				evt.Use();
+			}
+		}
+
+		return ControlValues.TryGetValue(controlName, out var result) ? result : text;
+	}
+
+	private object RenderFloatControl(Rect rect, object currentValue, string controlName)
+	{
+		var culture = CultureInfo.InvariantCulture;
+		var text = Il2CppTextField(rect, ((float)currentValue).ToString("G", culture), controlName);
+		text = text.Replace(",", ".");
+		if (float.TryParse(text, NumberStyles.Float, culture, out var floatVal))
+			return floatVal;
+		return currentValue;
+	}
+
+	private object RenderIntControl(Rect rect, object currentValue, string controlName)
+	{
+		var text = Il2CppTextField(rect, currentValue.ToString(), controlName);
+		if (int.TryParse(text, out var intVal))
+			return intVal;
+		return currentValue;
 	}
 }

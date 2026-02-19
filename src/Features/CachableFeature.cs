@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using JetBrains.Annotations;
+﻿using System.Collections.Generic;
 using TrainerKit.Configuration;
 using UnityEngine;
 
@@ -15,37 +13,36 @@ internal abstract class CachableFeature<T> : ToggleFeature
 
 	private readonly List<T> _data = [];
 	private bool _refreshing = false;
+	private float _lastRefreshTime = float.MinValue;
 
-	[UsedImplicitly]
-	private void Start()
+	private void TryRefreshData()
 	{
-		StartCoroutine(RefreshDataScheduler());
-	}
+		if (Time.time - _lastRefreshTime < CacheTimeInSec)
+			return;
 
-	private IEnumerator RefreshDataScheduler()
-	{
-		if (Enabled)
+		_lastRefreshTime = Time.time;
+
+		if (!Enabled)
+			return;
+
+		try
 		{
-			try
-			{
-				_refreshing = true;
+			_refreshing = true;
 
-				BeforeRefreshData(_data);
-				_data.Clear(); // but we'll keep previous capacity
-				RefreshData(_data);
-			}
-			finally
-			{
-				_refreshing = false;
-			}
+			BeforeRefreshData(_data);
+			_data.Clear();
+			RefreshData(_data);
 		}
-
-		yield return new WaitForSeconds(CacheTimeInSec);
-		StartCoroutine(RefreshDataScheduler());
+		finally
+		{
+			_refreshing = false;
+		}
 	}
 
 	protected override void UpdateWhenEnabled()
 	{
+		TryRefreshData();
+
 		if (_refreshing)
 			return;
 

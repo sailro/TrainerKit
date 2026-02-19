@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using UnityEngine;
 
 #nullable enable
 
@@ -8,19 +7,19 @@ namespace TrainerKit.Features;
 
 internal static class FeatureFactory
 {
-	private static GameObject? _gameObject = null;
+	private static Feature[]? _features = null;
 	private static readonly Lazy<Type[]> Types = new(() => [.. typeof(FeatureFactory)
 		.Assembly
 		.GetTypes()
 		.Where(t => t.IsSubclassOf(typeof(Feature)) && !t.IsAbstract)]);
 
-	public static Feature[] RegisterAllFeatures(GameObject gameObject)
+	public static Feature[] RegisterAllFeatures()
 	{
-		_gameObject = gameObject;
-
-		return [.. GetAllFeatureTypes()
-			.Select(gameObject.AddComponent)
+		_features = [.. GetAllFeatureTypes()
+			.Select(Activator.CreateInstance)
 			.OfType<Feature>()];
+
+		return _features;
 	}
 
 	public static Type[] GetAllFeatureTypes()
@@ -37,12 +36,7 @@ internal static class FeatureFactory
 
 	public static Feature[] GetAllFeatures()
 	{
-		if (_gameObject == null)
-			return [];
-
-		return [.. GetAllFeatureTypes()
-			.Select(_gameObject.GetComponent)
-			.OfType<Feature>()];
+		return _features ?? [];
 	}
 
 	public static ToggleFeature[] GetAllToggleableFeatures()

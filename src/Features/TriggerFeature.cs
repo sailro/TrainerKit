@@ -1,5 +1,4 @@
-﻿using JetBrains.Annotations;
-using TrainerKit.Configuration;
+﻿using TrainerKit.Configuration;
 using UnityEngine;
 
 #nullable enable
@@ -11,8 +10,7 @@ internal abstract class TriggerFeature : Feature
 	[ConfigurationProperty(Order = 2)]
 	public virtual KeyCode Key { get; set; } = KeyCode.None;
 
-	[UsedImplicitly]
-	private void Update()
+	public override void DoUpdate()
 	{
 		if (Key != KeyCode.None && Input.GetKeyUp(Key))
 			UpdateOnceWhenTriggered();

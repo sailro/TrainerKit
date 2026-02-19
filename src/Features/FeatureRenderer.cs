@@ -20,9 +20,69 @@ internal abstract class FeatureRenderer : ToggleFeature
 	protected const float DefaultX = 40f;
 	protected const float DefaultY = 20f;
 
-	private static GUIStyle LabelStyle => new() { wordWrap = false, normal = { textColor = Color.white }, margin = new RectOffset(8, 0, 8, 0), fixedWidth = 150f, stretchWidth = false };
-	private static GUIStyle DescriptionStyle => new() { wordWrap = true, normal = { textColor = Color.white }, margin = new RectOffset(8, 0, 8, 0), stretchWidth = true };
-	private static GUIStyle BoxStyle => new(GUI.skin.box) { normal = { background = Texture2D.whiteTexture, textColor = Color.white } };
+	private static GUIStyle MakeLabelStyle()
+	{
+		var style = new GUIStyle();
+		style.wordWrap = false;
+		style.normal.textColor = Color.white;
+		style.margin = MakeRectOffset(8, 0, 8, 0);
+		style.fixedWidth = 150f;
+		style.stretchWidth = false;
+		return style;
+	}
+
+	private static GUIStyle MakeDescriptionStyle()
+	{
+		var style = new GUIStyle();
+		style.wordWrap = true;
+		style.normal.textColor = Color.white;
+		style.margin = MakeRectOffset(8, 0, 8, 0);
+		style.stretchWidth = true;
+		return style;
+	}
+
+	private static GUIStyle MakeBoxStyle()
+	{
+		var style = new GUIStyle();
+		style.normal.background = Texture2D.whiteTexture;
+		style.normal.textColor = Color.white;
+		return style;
+	}
+
+	private static RectOffset MakeRectOffset(int left, int right, int top, int bottom)
+	{
+		var offset = new RectOffset();
+		offset.left = left;
+		offset.right = right;
+		offset.top = top;
+		offset.bottom = bottom;
+		return offset;
+	}
+
+	private static GUIStyle? _labelStyle;
+	private static GUIStyle LabelStyle => _labelStyle ??= MakeLabelStyle();
+
+	private static GUIStyle? _descriptionStyle;
+	private static GUIStyle DescriptionStyle => _descriptionStyle ??= MakeDescriptionStyle();
+
+	private static GUIStyle? _boxStyle;
+	private static GUIStyle BoxStyle => _boxStyle ??= MakeBoxStyle();
+
+	private static GUIStyle? _colorButtonFullStyle;
+	private static GUIStyle ColorButtonFullStyle
+	{
+		get
+		{
+			if (_colorButtonFullStyle == null)
+			{
+				_colorButtonFullStyle = new GUIStyle();
+				_colorButtonFullStyle.normal.background = Texture2D.whiteTexture;
+				_colorButtonFullStyle.normal.textColor = Color.white;
+				_colorButtonFullStyle.fixedHeight = 22f;
+			}
+			return _colorButtonFullStyle;
+		}
+	}
 
 	protected void SetupWindowCoordinates()
 	{
@@ -69,19 +129,58 @@ internal abstract class FeatureRenderer : ToggleFeature
 	private Rect _clientWindowRect;
 	private readonly Dictionary<SelectionContextType, SelectionContext> _selectionContexts = [];
 
+	// Manual drag state (GUI.Window/GUI.DragWindow don't receive mouse events in IL2CPP)
+	private bool _isDragging;
+	private Vector2 _dragOffset;
+	private const float TitleBarHeight = 24f;
+
 	protected override void OnGUIWhenEnabled()
 	{
-		_clientWindowRect = new Rect(X, Y, 490, _clientWindowRect.height);
-		_clientWindowRect = GUILayout.Window(0, _clientWindowRect, RenderFeatureWindow, Strings.FeatureCommandsTitle, GUILayout.ExpandHeight(true), GUILayout.ExpandWidth(true));
-		_clientWindowRect.height = Math.Max(_clientWindowRect.height, 256);
+		_clientWindowRect = new Rect(X, Y, 490, Math.Max(_clientWindowRect.height, 256));
 
-		X = _clientWindowRect.x;
-		Y = _clientWindowRect.y;
-
+		// Render picker windows FIRST so they get mouse events before main window buttons
 		foreach (var key in _selectionContexts.Keys)
 		{
 			if (HandleSelectionContext(_selectionContexts[key]))
 				_selectionContexts.Remove(key);
+		}
+
+		// Manual drag handling
+		HandleDrag();
+
+		// Draw window background and title
+		GUI.Box(_clientWindowRect, string.Empty);
+		var titleRect = new Rect(_clientWindowRect.x, _clientWindowRect.y, _clientWindowRect.width, TitleBarHeight);
+		GUI.Label(titleRect, Strings.FeatureCommandsTitle, TitleStyle);
+
+		// Render window content with absolute screen coordinates
+		RenderWindowContent();
+
+		X = _clientWindowRect.x;
+		Y = _clientWindowRect.y;
+	}
+
+	private void HandleDrag()
+	{
+		var evt = Event.current;
+		var titleRect = new Rect(_clientWindowRect.x, _clientWindowRect.y, _clientWindowRect.width, TitleBarHeight);
+
+		if (evt.type == EventType.MouseDown && titleRect.Contains(evt.mousePosition))
+		{
+			_isDragging = true;
+			_dragOffset = evt.mousePosition - new Vector2(_clientWindowRect.x, _clientWindowRect.y);
+			evt.Use();
+		}
+		else if (evt.type == EventType.MouseDrag && _isDragging)
+		{
+			_clientWindowRect.x = evt.mousePosition.x - _dragOffset.x;
+			_clientWindowRect.y = evt.mousePosition.y - _dragOffset.y;
+			evt.Use();
+		}
+		else if (evt.type == EventType.MouseUp && _isDragging)
+		{
+			_isDragging = false;
+			evt.Use();
 		}
 	}
 
@@ -99,9 +198,36 @@ internal abstract class FeatureRenderer : ToggleFeature
 		return picker.IsSelected;
 	}
 
-	private int _selectedTabIndex = 0;
-	private void RenderFeatureWindow(int id)
+	private const float TabWidth = 150f;
+	private const float ContentMargin = 8f;
+	private const float WindowPadding = 10f;
+	private const float RowHeight = 22f;
+	private const float PropertyLabelWidth = 150f;
+	private const float PropertyControlWidth = 150f;
+
+	private static GUIStyle? _titleStyle;
+	private static GUIStyle TitleStyle
 	{
+		get
+		{
+			if (_titleStyle == null)
+			{
+				_titleStyle = new GUIStyle();
+				_titleStyle.alignment = TextAnchor.MiddleCenter;
+				_titleStyle.fontStyle = FontStyle.Bold;
+				_titleStyle.normal.textColor = Color.white;
+				_titleStyle.fontSize = 13;
+			}
+			return _titleStyle;
+		}
+	}
+
+	private int _selectedTabIndex = 0;
+	private void RenderWindowContent()
+	{
+		var wx = _clientWindowRect.x;
+		var wy = _clientWindowRect.y;
+
 		var fixedTabs = new[] { Strings.FeatureRendererSummary };
 
 		var tabs = fixedTabs
@@ -114,35 +240,86 @@ internal abstract class FeatureRenderer : ToggleFeature
 			)
 			.ToArray();
 
-		var style = new GUIStyle { wordWrap = false, normal = { textColor = Color.white }, alignment = TextAnchor.UpperLeft, fixedHeight = 1, stretchHeight = true };
-
-		GUILayout.BeginHorizontal();
+		// Tab list on the left — individual buttons
+		var tabY = wy + WindowPadding + TitleBarHeight;
 		var lastIndex = _selectedTabIndex;
-		_selectedTabIndex = GUILayout.SelectionGrid(_selectedTabIndex, tabs, 1, GUILayout.Width(LabelStyle.fixedWidth));
-
-		if (lastIndex != _selectedTabIndex)
+		for (int i = 0; i < tabs.Length; i++)
 		{
-			_selectionContexts.Clear();
+			var tabRect = new Rect(wx + WindowPadding, tabY, TabWidth, RowHeight);
+			if (Il2CppButton(tabRect, tabs[i]))
+				_selectedTabIndex = i;
+			tabY += RowHeight + 2;
 		}
 
-		GUILayout.BeginVertical(style);
-		GUILayout.Space(4);
+		if (lastIndex != _selectedTabIndex)
+			_selectionContexts.Clear();
+
+		// Content on the right
+		var contentX = wx + WindowPadding + TabWidth + ContentMargin;
+		var contentWidth = 490 - WindowPadding - TabWidth - ContentMargin - WindowPadding;
+		var layout = new ImguiLayout(contentX, wy + WindowPadding + TitleBarHeight + 4, contentWidth);
 
 		switch (_selectedTabIndex)
 		{
 			case 0:
-				RenderSummary();
+				RenderSummary(layout);
 				break;
 			default:
 				var feature = Context.Features.Value[_selectedTabIndex - fixedTabs.Length];
-				RenderFeature(feature);
-
+				RenderFeature(feature, layout);
 				break;
-
 		}
-		GUILayout.EndVertical();
-		GUILayout.EndHorizontal();
-		GUI.DragWindow();
+
+		// Auto-resize window height
+		var neededHeight = Math.Max(tabY - wy, layout.CurrentY - wy) + WindowPadding;
+		_clientWindowRect.height = Math.Max(neededHeight, 256);
+	}
+
+	/// <summary>
+	/// Rect.Contains may not work in IL2CPP. Manual bounds check.
+	/// </summary>
+	private static bool RectContains(Rect rect, Vector2 point)
+	{
+		return point.x >= rect.x && point.x <= rect.x + rect.width
+			&& point.y >= rect.y && point.y <= rect.y + rect.height;
+	}
+
+	/// <summary>
+	/// GUI.Button renders correctly in IL2CPP but never returns true.
+	/// Detect clicks manually via Event.current.
+	/// Note: Use MouseDown — EventType.MouseUp comparison may be broken in IL2CPP.
+	/// </summary>
+	private static bool Il2CppButton(Rect rect, string text)
+	{
+		var evt = Event.current;
+		bool clicked = evt.type == EventType.MouseDown && evt.button == 0 && RectContains(rect, evt.mousePosition);
+		GUI.Button(rect, text);
+		if (clicked)
+			evt.Use();
+		return clicked;
+	}
+
+	private static bool Il2CppButton(Rect rect, string text, GUIStyle style)
+	{
+		var evt = Event.current;
+		bool clicked = evt.type == EventType.MouseDown && evt.button == 0 && RectContains(rect, evt.mousePosition);
+		GUI.Button(rect, text, style);
+		if (clicked)
+			evt.Use();
+		return clicked;
+	}
+
+	/// <summary>
+	/// GUI.Toggle return value is broken in IL2CPP. Detect clicks manually.
+	/// </summary>
+	private static bool Il2CppToggle(Rect rect, bool value, string text)
+	{
+		var evt = Event.current;
+		bool clicked = evt.type == EventType.MouseDown && evt.button == 0 && RectContains(rect, evt.mousePosition);
+		GUI.Toggle(rect, value, text);
+		if (clicked)
+			return !value;
+		return value;
 	}
 
 	private static string RenderFeatureText(Feature feature)
@@ -153,19 +330,16 @@ internal abstract class FeatureRenderer : ToggleFeature
 		return string.Format(Strings.CommandStatusTextFormat, feature.Name, toggleFeature.Enabled ? Strings.TextOn.Green() : Strings.TextOff.Red(), string.Empty);
 	}
 
-	private void RenderSummary()
+	private void RenderSummary(ImguiLayout layout)
 	{
-		GUILayout.BeginVertical();
+		GUI.Label(layout.NextRect(30), $"<i><b>{Strings.FeatureRendererWelcome}</b></i>", DescriptionStyle);
+		layout.Space(4);
 
-		GUILayout.Label($"<i><b>{Strings.FeatureRendererWelcome}</b></i>\n", DescriptionStyle);
-
-		if (GUILayout.Button(Strings.CommandLoadDescription))
+		if (Il2CppButton(layout.NextRect(), Strings.CommandLoadDescription))
 			LoadSettings();
 
-		if (GUILayout.Button(Strings.CommandSaveDescription))
+		if (Il2CppButton(layout.NextRect(), Strings.CommandSaveDescription))
 			SaveSettings();
-
-		GUILayout.EndVertical();
 	}
 
 	protected static void SaveSettings()
@@ -188,42 +362,43 @@ internal abstract class FeatureRenderer : ToggleFeature
 		Y = cy;
 	}
 
-	private void RenderFeature(Feature feature)
+	private void RenderFeature(Feature feature, ImguiLayout layout)
 	{
 		var orderedProperties = ConfigurationManager.GetOrderedProperties(feature.GetType());
 
-		GUILayout.BeginVertical();
-
-		GUILayout.Label($"<i><b>{feature.Description}</b></i>\n", DescriptionStyle);
+		GUI.Label(layout.NextRect(30), $"<i><b>{feature.Description}</b></i>", DescriptionStyle);
+		layout.Space(4);
 
 		foreach (var property in orderedProperties)
-			RenderFeatureProperty(feature, property);
-
-		GUILayout.EndVertical();
+			RenderFeatureProperty(feature, property, layout);
 	}
 
 	private static readonly Dictionary<string, string> ControlValues = [];
-	private void RenderFeatureProperty(Feature feature, OrderedProperty orderedProperty)
+	private void RenderFeatureProperty(Feature feature, OrderedProperty orderedProperty, ImguiLayout layout)
 	{
 		if (!orderedProperty.Attribute.Browsable)
 			return;
 
 		var property = orderedProperty.Property;
 
-		GUILayout.FlexibleSpace();
-		GUILayout.BeginHorizontal();
+		layout.BeginHorizontal(PropertyLabelWidth);
+		GUI.Label(layout.NextRect(), GetPropertyDisplay(property.Name), LabelStyle);
 
-		GUILayout.Label(GetPropertyDisplay(property.Name), LabelStyle);
-		GUILayout.FlexibleSpace();
+		layout.FlexRemaining();
 
 		var currentValue = property.GetValue(feature);
 		var currentBackgroundColor = GUI.backgroundColor;
 
 		if (currentValue == null)
+		{
+			layout.EndHorizontal();
 			return;
+		}
 
-		var width = GUILayout.Width(LabelStyle.fixedWidth);
-		var newValue = RenderFeaturePropertyAsUIComponent(feature, orderedProperty, currentValue, width);
+		var controlName = $"{feature.Name}.{property.Name}-{property.PropertyType.Name}";
+		GUI.SetNextControlName(controlName);
+
+		var newValue = RenderControl(feature, orderedProperty, currentValue, controlName, layout);
 
 		if (currentValue != newValue && property.CanWrite)
 			property.SetValue(feature, newValue);
@@ -237,70 +412,59 @@ internal abstract class FeatureRenderer : ToggleFeature
 		}
 
 		GUI.backgroundColor = currentBackgroundColor;
-		GUILayout.EndHorizontal();
+		layout.EndHorizontal();
 	}
 
 	protected abstract string GetPropertyDisplay(string propertyName);
 
-	private object RenderFeaturePropertyAsUIComponent(IFeature feature, OrderedProperty orderedProperty, object currentValue, GUILayoutOption width)
+	private object RenderControl(IFeature feature, OrderedProperty orderedProperty, object currentValue, string controlName, ImguiLayout layout)
 	{
 		var property = orderedProperty.Property;
 		var propertyType = property.PropertyType;
-
 		var newValue = currentValue;
-		var controlName = $"{feature.Name}.{property.Name}-{propertyType.Name}";
-		GUI.SetNextControlName(controlName);
+		var rect = layout.NextRect();
 
 		switch (propertyType.Name)
 		{
 			case nameof(Boolean):
-				newValue = RenderBooleanProperty(currentValue, width);
+				var boolValue = (bool)currentValue;
+				var newBool = Il2CppToggle(rect, boolValue, string.Empty);
+				if (newBool != boolValue) _selectionContexts.Clear();
+				newValue = newBool;
 				break;
 
 			case nameof(KeyCode):
-				RenderKeyCodeProperty(currentValue, controlName, feature, orderedProperty, width);
+				if (Il2CppButton(rect, currentValue.ToString()))
+				{
+					_selectionContexts[SelectionContextType.KeyCode] = new SelectionContext(feature, orderedProperty, X, Y, o => new EnumPicker<KeyCode>((KeyCode)o), SelectionContextType.KeyCode);
+					GUI.FocusControl(controlName);
+				}
 				break;
 
 			case nameof(Single):
-				newValue = RenderFloatProperty(currentValue, controlName, width);
+				newValue = RenderFloatControl(rect, currentValue, controlName);
 				break;
 
 			case nameof(Int32):
-				newValue = RenderIntProperty(currentValue, width);
+				if (int.TryParse(GUI.TextField(rect, currentValue.ToString()), out var intVal))
+					newValue = intVal;
 				break;
 
 			case nameof(Color):
-				RenderColorProperty(currentValue, controlName, feature, orderedProperty, width);
+				GUI.backgroundColor = (Color)currentValue;
+				if (Il2CppButton(rect, string.Empty, ColorButtonFullStyle))
+				{
+					_selectionContexts[SelectionContextType.Color] = new SelectionContext(feature, orderedProperty, X, Y, o => new ColorPicker((Color)o), SelectionContextType.Color);
+					GUI.FocusControl(controlName);
+				}
 				break;
 
 			case nameof(String):
-				newValue = RenderStringProperty(currentValue, width);
+				newValue = GUI.TextField(rect, currentValue.ToString());
 				break;
 
 			default:
-				// Look for inner properties
-				if (currentValue is IFeature subFeature)
-				{
-					var subProperties = ConfigurationManager.GetOrderedProperties(propertyType);
-					var length = subProperties.Length;
-
-					if (length > 0)
-					{
-						width = GUILayout.Width(LabelStyle.fixedWidth / length - length);
-
-						foreach (var innerOrderedProperty in subProperties)
-						{
-							var innerProperty = innerOrderedProperty.Property;
-							var innerPropertyValue = innerProperty.GetValue(subFeature);
-							RenderFeaturePropertyAsUIComponent(subFeature, innerOrderedProperty, innerPropertyValue, width);
-						}
-
-						break;
-					}
-
-				}
-
-				GUILayout.Label(string.Format(Strings.ErrorUnsupportedTypeFormat, propertyType.FullName));
+				GUI.Label(rect, string.Format(Strings.ErrorUnsupportedTypeFormat, propertyType.FullName));
 				break;
 		}
 
@@ -314,42 +478,7 @@ internal abstract class FeatureRenderer : ToggleFeature
 			   && !focused.EndsWith($"-{context.ContextType}");
 	}
 
-	private static object RenderIntProperty(object currentValue, GUILayoutOption option)
-	{
-		object newValue = currentValue;
-
-		if (int.TryParse(GUILayout.TextField(currentValue.ToString(), option), out var intValue))
-			newValue = intValue;
-
-		return newValue;
-	}
-
-	private static object RenderStringProperty(object currentValue, GUILayoutOption width)
-	{
-		return GUILayout.TextField(currentValue.ToString(), width);
-	}
-
-	private void RenderKeyCodeProperty(object currentValue, string controlName, IFeature feature, OrderedProperty orderedProperty, GUILayoutOption option)
-	{
-		if (!GUILayout.Button(currentValue.ToString(), option))
-			return;
-
-		_selectionContexts[SelectionContextType.KeyCode] = new SelectionContext(feature, orderedProperty, X, Y, o => new EnumPicker<KeyCode>((KeyCode)o), SelectionContextType.KeyCode);
-		GUI.FocusControl(controlName);
-	}
-
-	private void RenderColorProperty(object currentValue, string controlName, IFeature feature, OrderedProperty orderedProperty, GUILayoutOption option)
-	{
-		GUI.backgroundColor = (Color)currentValue;
-
-		if (!GUILayout.Button(string.Empty, BoxStyle, option, GUILayout.Height(22f)))
-			return;
-
-		_selectionContexts[SelectionContextType.Color] = new SelectionContext(feature, orderedProperty, X, Y, o => new ColorPicker((Color)o), SelectionContextType.Color);
-		GUI.FocusControl(controlName);
-	}
-
-	private static object RenderFloatProperty(object currentValue, string controlName, GUILayoutOption width)
+	private static object RenderFloatControl(Rect rect, object currentValue, string controlName)
 	{
 		const string decimalSeparator = ".";
 		const string altDecimalSeparator = ",";
@@ -363,8 +492,8 @@ internal abstract class FeatureRenderer : ToggleFeature
 		if (controlText != currentValue.ToString())
 			GUI.backgroundColor = Color.red;
 
-		controlText = GUILayout
-			.TextField(controlText, width)
+		controlText = GUI
+			.TextField(rect, controlText)
 			.Replace(altDecimalSeparator, decimalSeparator);
 
 		if (!controlText.EndsWith(decimalSeparator) && float.TryParse(controlText, NumberStyles.Float, culture, out var floatValue))
@@ -374,18 +503,6 @@ internal abstract class FeatureRenderer : ToggleFeature
 		}
 
 		ControlValues[controlName] = controlText;
-		return newValue;
-	}
-
-	private object RenderBooleanProperty(object currentValue, GUILayoutOption option)
-	{
-		var boolValue = (bool)currentValue;
-		var newValue = GUILayout.Toggle(boolValue, string.Empty, option);
-		if (newValue != boolValue)
-		{
-			_selectionContexts.Clear();
-		}
-
 		return newValue;
 	}
 }

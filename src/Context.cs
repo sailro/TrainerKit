@@ -1,19 +1,21 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using JetBrains.Annotations;
+using MelonLoader;
 using TrainerKit.Features;
 using TrainerKit.Properties;
-using UnityEngine;
+
+[assembly: MelonInfo(typeof(TrainerKit.Context), "TrainerKit", "1.0.0", "TrainerKit")]
+[assembly: MelonGame]
 
 namespace TrainerKit;
 
-internal static class Context
+public class Context : MelonMod
 {
 	public static string UserPath => Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
 	public static string ConfigFile => Path.Combine(UserPath, "trainerkit.ini");
 
-	public static Lazy<Feature[]> Features => new(() => [.. FeatureFactory.GetAllFeatures().OrderBy(f => f.Name)]);
+	internal static Lazy<Feature[]> Features => new(() => [.. FeatureFactory.GetAllFeatures().OrderBy(f => f.Name)]);
 
 	public static string LastConsoleLog { get; set; } = string.Empty;
 	public static void AddConsoleLog(string log)
@@ -21,17 +23,26 @@ internal static class Context
 		LastConsoleLog = log;
 	}
 
-	[UsedImplicitly]
-	public static void Load()
+	public override void OnInitializeMelon()
 	{
-		var go = new GameObject(nameof(Context));
-		UnityEngine.Object.DontDestroyOnLoad(go);
-		FeatureFactory.RegisterAllFeatures(go);
+		FeatureFactory.RegisterAllFeatures();
 
 		var commands = FeatureFactory.GetFeature<Commands>();
 		if (commands == null)
 			return;
 
 		AddConsoleLog(Strings.FeatureRendererWelcome + $" ({commands.Key})");
+	}
+
+	public override void OnUpdate()
+	{
+		foreach (var feature in Features.Value)
+			feature.DoUpdate();
+	}
+
+	public override void OnGUI()
+	{
+		foreach (var feature in Features.Value)
+			feature.DoOnGUI();
 	}
 }

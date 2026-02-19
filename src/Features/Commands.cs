@@ -32,26 +32,27 @@ internal class Commands : FeatureRenderer
 	private bool Registered { get; set; } = false;
 	private Dictionary<string, string> PropertyDisplays { get; } = [];
 
-	protected override void Update()
+	public override void DoUpdate()
 	{
-		if (Registered)
+		if (!Registered)
 		{
-			base.Update();
-			return;
+			RegisterPropertyDisplays();
+
+			// Load default configuration
+			LoadSettings(false);
+			SetupWindowCoordinates();
+
+			Registered = true;
 		}
 
-		RegisterPropertyDisplays();
-
-		// Load default configuration
-		LoadSettings(false);
-		SetupWindowCoordinates();
-
-		Registered = true;
+		base.DoUpdate();
 	}
-	protected override void OnGUI()
+
+	public override void DoOnGUI()
 	{
-		Render.DrawString(new Vector2(8, Screen.height - 24), Context.LastConsoleLog, ConsoleColor, false);
-		base.OnGUI();
+		Render.GetContentAndSize(Context.LastConsoleLog, out _, out var textSize);
+		Render.DrawString(new Vector2(8, Screen.height - textSize.y - 8), Context.LastConsoleLog, ConsoleColor, false);
+		base.DoOnGUI();
 	}
 
 	private void RegisterPropertyDisplays()

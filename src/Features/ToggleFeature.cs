@@ -1,5 +1,4 @@
-﻿using JetBrains.Annotations;
-using TrainerKit.Configuration;
+﻿using TrainerKit.Configuration;
 using UnityEngine;
 
 #nullable enable
@@ -14,7 +13,7 @@ internal abstract class ToggleFeature : Feature
 	[ConfigurationProperty(Order = 2)]
 	public virtual KeyCode Key { get; set; } = KeyCode.None;
 
-	protected virtual void Update()
+	public override void DoUpdate()
 	{
 		if (Key != KeyCode.None && Input.GetKeyUp(Key))
 			Enabled = !Enabled;
@@ -26,8 +25,7 @@ internal abstract class ToggleFeature : Feature
 			UpdateWhenDisabled();
 	}
 
-	[UsedImplicitly]
-	protected virtual void OnGUI()
+	public override void DoOnGUI()
 	{
 		if (Enabled)
 			OnGUIWhenEnabled();

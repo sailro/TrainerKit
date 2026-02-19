@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using UnityEngine;
 
 #nullable enable
 
@@ -11,10 +10,13 @@ internal interface IFeature
 	public string Name { get; }
 }
 
-internal abstract class Feature : MonoBehaviour, IFeature
+internal abstract class Feature : IFeature
 {
 	public abstract string Name { get; }
 	public abstract string Description { get; }
+
+	public virtual void DoUpdate() { }
+	public virtual void DoOnGUI() { }
 
 	protected void AddConsoleLog(string log)
 	{

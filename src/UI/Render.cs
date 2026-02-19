@@ -12,7 +12,14 @@ public static class Render
 		get
 		{
 			// delay initialize stringStyle to be sure we are called under OnGui
-			return _stringStyle ??= new GUIStyle(GUI.skin.label);
+			if (_stringStyle == null)
+			{
+				_stringStyle = new GUIStyle();
+				_stringStyle.fontSize = 14;
+				_stringStyle.richText = true;
+				_stringStyle.normal.textColor = Color.white;
+			}
+			return _stringStyle;
 		}
 	}
 
@@ -33,14 +40,20 @@ public static class Render
 	public static void GetContentAndSize(string label, out GUIContent content, out Vector2 size)
 	{
 		content = new GUIContent(label);
-		size = StringStyle.CalcSize(content);
+		// CalcSize may return wrong values in IL2CPP; estimate based on font size
+		var calcSize = StringStyle.CalcSize(content);
+		if (calcSize.y < 10f)
+			calcSize = new Vector2(label.Length * 8f, 20f);
+		size = calcSize;
 	}
 
 	public static Vector2 DrawString(Vector2 position, string label, bool centered = true)
 	{
 		GetContentAndSize(label, out var content, out var size);
 		var upperLeft = centered ? position - size / 2f : position;
-		GUI.Label(new Rect(upperLeft, size), content);
+		// Use a generous rect to avoid clipping
+		var rect = new Rect(upperLeft.x, upperLeft.y, Mathf.Max(size.x, Screen.width - upperLeft.x), Mathf.Max(size.y, 24f));
+		GUI.Label(rect, content, StringStyle);
 		return size;
 	}
 

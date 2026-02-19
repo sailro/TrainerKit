@@ -1,10 +1,11 @@
 ﻿using UnityEngine;
 
+#nullable enable
+
 namespace TrainerKit.UI;
 
 public class ColorPicker : Picker<Color>
 {
-
 	public float H => _h;
 	public float S => _s;
 	public float V => _v;
@@ -13,33 +14,38 @@ public class ColorPicker : Picker<Color>
 	private float _s = 0f;
 	private float _v = 0f;
 
-	private Rect _windowRect = new(20, 20, 165, 100);
+	private Rect _windowRect = new(20, 20, 180, 210);
 
 	private readonly GUIStyle _previewStyle;
 	private readonly GUIStyle _svStyle;
 	private readonly GUIStyle _hueStyle;
 
 	private readonly Texture2D _svTexture;
-	private readonly Texture2D _circle;
-	private readonly Texture2D _rightArrow;
-	private readonly Texture2D _leftArrow;
 
 	private const int HsvPickerSize = 120, HuePickerWidth = 16;
+	private const float TitleBarHeight = 24f;
+	private const float Padding = 8f;
+	private const float PreviewHeight = 12f;
+	private const float AlphaHeight = 2f;
+
+	// Manual drag state
+	private bool _isDragging;
+	private Vector2 _dragOffset;
 
 	public ColorPicker(Color color) : base(color)
 	{
 		ColorUtil.RgbToHsv(Value, out _h, out _s, out _v);
 
-		_circle = Resources.Load<Texture2D>("imCircle");
-		_rightArrow = Resources.Load<Texture2D>("imRight");
-		_leftArrow = Resources.Load<Texture2D>("imLeft");
-		_previewStyle = new GUIStyle { normal = { background = Texture2D.whiteTexture } };
+		_previewStyle = new GUIStyle();
+		_previewStyle.normal.background = Texture2D.whiteTexture;
 
 		var hueTexture = CreateHueTexture(20, HsvPickerSize);
-		_hueStyle = new GUIStyle { normal = { background = hueTexture } };
+		_hueStyle = new GUIStyle();
+		_hueStyle.normal.background = hueTexture;
 
 		_svTexture = CreateSvTexture(Value, HsvPickerSize);
-		_svStyle = new GUIStyle { normal = { background = _svTexture } };
+		_svStyle = new GUIStyle();
+		_svStyle.normal.background = _svTexture;
 	}
 
 	public override void SetWindowPosition(float x, float y)
@@ -50,76 +56,81 @@ public class ColorPicker : Picker<Color>
 
 	public override void DrawWindow(int id, string title)
 	{
-		_windowRect = GUI.Window(id, _windowRect, DrawColorPickerWindow, title);
-	}
+		// Manual drag
+		var evt = Event.current;
+		var titleRect = new Rect(_windowRect.x, _windowRect.y, _windowRect.width, TitleBarHeight);
 
-	private void DrawColorPickerWindow(int id)
-	{
-		DrawColorPicker();
-
-		if (Event.current.type == EventType.Repaint)
+		if (evt.type == EventType.MouseDown && titleRect.Contains(evt.mousePosition))
 		{
-			var rect = GUILayoutUtility.GetLastRect();
-			_windowRect.height = rect.y + rect.height + 10f;
+			_isDragging = true;
+			_dragOffset = evt.mousePosition - new Vector2(_windowRect.x, _windowRect.y);
+			evt.Use();
+		}
+		else if (evt.type == EventType.MouseDrag && _isDragging)
+		{
+			_windowRect.x = evt.mousePosition.x - _dragOffset.x;
+			_windowRect.y = evt.mousePosition.y - _dragOffset.y;
+			evt.Use();
+		}
+		else if (evt.type == EventType.MouseUp && _isDragging)
+		{
+			_isDragging = false;
+			evt.Use();
 		}
 
-		GUI.DragWindow();
-	}
+		// Calculate layout
+		float totalWidth = HsvPickerSize + 10 + HuePickerWidth;
+		_windowRect.width = totalWidth + Padding * 2;
+		_windowRect.height = TitleBarHeight + Padding + PreviewHeight + 2 + AlphaHeight + 5 + HsvPickerSize + Padding;
 
-	public void DrawColorPicker()
-	{
-		using (new GUILayout.VerticalScope())
-		{
-			GUILayout.Space(5f);
-			DrawPreview(Value);
+		// Draw background and title
+		GUI.Box(_windowRect, string.Empty);
+		var titleStyle = new GUIStyle();
+		titleStyle.alignment = TextAnchor.MiddleCenter;
+		titleStyle.fontStyle = FontStyle.Bold;
+		titleStyle.normal.textColor = Color.white;
+		titleStyle.fontSize = 12;
+		GUI.Label(titleRect, title, titleStyle);
 
-			GUILayout.Space(5f);
-			DrawHsvPicker();
-		}
-	}
+		// Content area
+		float cx = _windowRect.x + Padding;
+		float cy = _windowRect.y + TitleBarHeight + Padding;
 
-	private void DrawPreview(Color color)
-	{
-		using (new GUILayout.VerticalScope())
-		{
-			var tmp = GUI.backgroundColor;
-			GUI.backgroundColor = new Color(color.r, color.g, color.b);
-			GUILayout.Label(string.Empty, _previewStyle, GUILayout.Width(HsvPickerSize + HuePickerWidth + 10), GUILayout.Height(12f));
+		// Preview bar
+		var tmp = GUI.backgroundColor;
+		GUI.backgroundColor = new Color(Value.r, Value.g, Value.b);
+		var previewRect = new Rect(cx, cy, totalWidth, PreviewHeight);
+		GUI.Label(previewRect, string.Empty, _previewStyle);
+		cy += PreviewHeight + 2;
 
-			GUILayout.Space(1f);
+		// Alpha bar
+		var alpha = Value.a;
+		GUI.backgroundColor = new Color(alpha, alpha, alpha);
+		var alphaRect = new Rect(cx, cy, totalWidth, AlphaHeight);
+		GUI.Label(alphaRect, string.Empty, _previewStyle);
+		GUI.backgroundColor = tmp;
+		cy += AlphaHeight + 5;
 
-			var alpha = color.a;
-			GUI.backgroundColor = new Color(alpha, alpha, alpha);
-			GUILayout.Label(string.Empty, _previewStyle, GUILayout.Width(HsvPickerSize + HuePickerWidth + 10), GUILayout.Height(2f));
+		// SV picker — use GUI.Label with styled background (GUI.DrawTexture is stripped)
+		var svRect = new Rect(cx, cy, HsvPickerSize, HsvPickerSize);
+		_svStyle.normal.background = _svTexture;
+		GUI.Label(svRect, string.Empty, _svStyle);
+		DrawSvHandler(svRect);
 
-			GUI.backgroundColor = tmp;
-		}
-	}
-
-	private void DrawHsvPicker()
-	{
-		using (new GUILayout.HorizontalScope())
-		{
-			GUILayout.Label(string.Empty, _svStyle, GUILayout.Width(HsvPickerSize), GUILayout.Height(HsvPickerSize));
-			DrawSvHandler(GUILayoutUtility.GetLastRect());
-
-			GUILayout.Space(10f);
-
-			GUILayout.Label(string.Empty, _hueStyle, GUILayout.Width(HuePickerWidth), GUILayout.Height(HsvPickerSize));
-			DrawHueHandler(GUILayoutUtility.GetLastRect());
-		}
+		// Hue picker
+		var hueRect = new Rect(cx + HsvPickerSize + 10, cy, HuePickerWidth, HsvPickerSize);
+		GUI.Label(hueRect, string.Empty, _hueStyle);
+		DrawHueHandler(hueRect);
 	}
 
 	private void DrawSvHandler(Rect rect)
 	{
-		const float size = 10f;
-		const float offset = 5f;
-		GUI.DrawTexture(new Rect(rect.x + _s * rect.width - offset, rect.y + (1f - _v) * rect.height - offset, size, size), _circle);
+		// Circle indicator omitted — Resources.Load textures unavailable in IL2CPP game
 
 		var e = Event.current;
 		var p = e.mousePosition;
 
-		if (e.button != 0 || e.type != EventType.MouseDown && e.type != EventType.MouseDrag || !rect.Contains(p))
+		if (e.button != 0 || e.type != EventType.MouseDown && e.type != EventType.MouseDrag || !RectContains(rect, p))
 			return;
 
 		_s = (p.x - rect.x) / rect.width;
@@ -131,14 +142,12 @@ public class ColorPicker : Picker<Color>
 
 	private void DrawHueHandler(Rect rect)
 	{
-		const float size = 15f;
-		GUI.DrawTexture(new Rect(rect.x - size * 0.75f, rect.y + (1f - _h) * rect.height - size * 0.5f, size, size), _rightArrow);
-		GUI.DrawTexture(new Rect(rect.x + rect.width - size * 0.25f, rect.y + (1f - _h) * rect.height - size * 0.5f, size, size), _leftArrow);
+		// Arrow indicators omitted — Resources.Load textures unavailable in IL2CPP game
 
 		var e = Event.current;
 		var p = e.mousePosition;
 
-		if (e.button != 0 || e.type != EventType.MouseDown && e.type != EventType.MouseDrag || !rect.Contains(p))
+		if (e.button != 0 || e.type != EventType.MouseDown && e.type != EventType.MouseDrag || !RectContains(rect, p))
 			return;
 
 		_h = 1f - (p.y - rect.y) / rect.height;
@@ -189,5 +198,11 @@ public class ColorPicker : Picker<Color>
 		var tex = new Texture2D(size, size);
 		UpdateSvTexture(c, tex);
 		return tex;
+	}
+
+	private static bool RectContains(Rect rect, Vector2 point)
+	{
+		return point.x >= rect.x && point.x <= rect.x + rect.width
+			&& point.y >= rect.y && point.y <= rect.y + rect.height;
 	}
 }

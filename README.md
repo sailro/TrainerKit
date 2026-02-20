@@ -2,9 +2,9 @@
 
 [![Sponsor](https://img.shields.io/badge/sponsor-%E2%9D%A4-lightgrey?logo=github&style=flat-square)](https://github.com/sponsors/sailro)
 
-TrainerKit is an extract of the Feature-system developed for [EscapeFromTarkov-Trainer](https://github.com/sailro/EscapeFromTarkov-Trainer).
+`TrainerKit` is an extract of the Feature-system developed for [EscapeFromTarkov-Trainer](https://github.com/sailro/EscapeFromTarkov-Trainer) for games compiled with the Mono backend. For the Il2Cpp backend, you can use [TrainerKit-Il2Cpp](https://github.com/sailro/TrainerKit-Il2Cpp).
 
-TrainerKit simplifies the development of internal Unity trainers by handling:
+`TrainerKit` simplifies the development of internal Unity trainers by handling:
 - UI rendering of features (everything is done automatically through reflection). Support for `Color`, `Float`, `Int`, `String`, `Bool`, `KeyCode` types.
 - Load/save of settings.
 - Runtime execution of Features.
@@ -12,7 +12,7 @@ TrainerKit simplifies the development of internal Unity trainers by handling:
 
 ## Example with Unity's FPS Microgame
 
-Starting with TrainerKit codebase, simply write the following code:
+Starting with `TrainerKit` codebase, simply write the following code:
 
 ```csharp
 using TrainerKit.Features;

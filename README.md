@@ -209,7 +209,7 @@ If you hit any issue while injecting, make sure you are not missing any dependen
   - `Mono` Backend.
   - Using Unity `2022.3.43f1`.
 
-- [DiscoElysium-Trainer](https://github.com/sailro/DiscoElysium-Trainer) for [Disco Elysium](https://store.steampowered.com/app/632470/Disco_Elysium__The_Final_Cut)
+- [DiscoElysium-Trainer](https://github.com/sailro/DiscoElysium-Trainer) for [Disco Elysium](https://store.steampowered.com/app/632470/Disco_Elysium__The_Final_Cut) game.
   - `Il2Cpp` Backend.
   - Using Unity `2020.3.12f1`.
 

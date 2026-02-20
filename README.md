@@ -28,13 +28,13 @@ internal class GodMode : ToggleFeature
 
 	protected override void UpdateWhenEnabled()
 	{
-		var health = FindFirstObjectByType<Health>();
+		var health = Object.FindFirstObjectByType<Health>();
 		health?.Invincible = true;
 	}
 
 	protected override void UpdateWhenDisabled()
 	{
-		var health = FindFirstObjectByType<Health>();
+		var health = Object.FindFirstObjectByType<Health>();
 		health?.Invincible = false;
 	}
 }
@@ -64,13 +64,13 @@ internal class UnlimitedAmmo : ToggleFeature
 
 	protected override void UpdateWhenEnabled()
 	{
-		var weapon = FindFirstObjectByType<WeaponController>();
+		var weapon = Object.FindFirstObjectByType<WeaponController>();
 		weapon?.MaxAmmo = int.MaxValue;
 	}
 
 	protected override void UpdateWhenDisabled()
 	{
-		var weapon = FindFirstObjectByType<WeaponController>();
+		var weapon = Object.FindFirstObjectByType<WeaponController>();
 		weapon?.MaxAmmo = 8;
 	}
 }

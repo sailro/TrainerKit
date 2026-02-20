@@ -206,16 +206,24 @@ If you hit any issue while injecting, make sure you are not missing any dependen
 
 - [EscapeFromTarkov-Trainer](https://github.com/sailro/EscapeFromTarkov-Trainer) for [Escape From Tarkov](https://www.escapefromtarkov.com/) game. *Before switching to IL2CPP*.
   - No `ILRepacking`: specific `BepInEx` injector, and `NewtonSoft.Json` types are directly provided by the game assemblies. Compiled for netfx `4.7.1`
+  - `Mono` Backend.
   - Using Unity `2022.3.43f1`.
+
+- [DiscoElysium-Trainer](https://github.com/sailro/DiscoElysium-Trainer) for [Disco Elysium](https://store.steampowered.com/app/632470/Disco_Elysium__The_Final_Cut)
+  - `Il2Cpp` Backend.
+  - Using Unity `2020.3.12f1`.
 
 - [IronCast-Trainer](https://github.com/sailro/Ironcast-Trainer) for [IronCast](http://store.steampowered.com/app/327670/) game.
   - No `ILRepacking`: standalone `SharpMonoInjector`, and `NewtonSoft.Json` types are directly provided by the game assemblies.
+  - `Mono` Backend.
   - Using Unity `4.6.1f1`, so compiled for netfx `3.5`, requiring minor code adaptations.
 
 - [YAZDHD-Trainer](https://github.com/sailro/YAZDHD-Trainer) for  [Yet Another Zombie Defense HD](https://store.steampowered.com/app/674750/Yet_Another_Zombie_Defense_HD) game.
   - `ILRepacking` to provide `SharpMonoInjector` as a built-in injector, and `NewtonSoft.Json` types internalized. Compiled for netfx `4.8.1`.
+  - `Mono` Backend.
   - Using Unity `2019.4.13f1`.
 
 - The demo Unity's FPS Microgame used here.
-  - `ILRepacking` to provide `SharpMonoInjector` as a built-in injector, and `NewtonSoft.Json` types internalized. Compiled for netfx `4.8.1`.
+  - With `Mono` backend, `ILRepacking` to provide `SharpMonoInjector` as a built-in injector, and `NewtonSoft.Json` types internalized. Compiled for netfx `4.8.1`.
+  - With `Il2Cpp` backend.
   - Using Unity `2022.3.62f3`.

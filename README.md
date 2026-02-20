@@ -218,6 +218,11 @@ If you hit any issue while injecting, make sure you are not missing any dependen
   - `Mono` Backend.
   - Using Unity `4.6.1f1`, so compiled for netfx `3.5`, requiring minor code adaptations.
 
+- [MonstersAreComing-Trainer](https://github.com/sailro/MonstersAreComing-Trainer) for [Monsters Are Coming](https://store.steampowered.com/app/2934220/Monsters_are_Coming_Rock__Road/) game.
+  - `Il2Cpp` Backend.
+  - New Input System.
+  - Using Unity `2022.3.62f2`.
+
 - [YAZDHD-Trainer](https://github.com/sailro/YAZDHD-Trainer) for  [Yet Another Zombie Defense HD](https://store.steampowered.com/app/674750/Yet_Another_Zombie_Defense_HD) game.
   - `ILRepacking` to provide `SharpMonoInjector` as a built-in injector, and `NewtonSoft.Json` types internalized. Compiled for netfx `4.8.1`.
   - `Mono` Backend.

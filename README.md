@@ -218,6 +218,10 @@ If you hit any issue while injecting, make sure you are not missing any dependen
   - `Mono` Backend.
   - Using Unity `4.6.1f1`, so compiled for netfx `3.5`, requiring minor code adaptations.
 
+- [Megabonk-Trainer](https://github.com/sailro/Megabonk-Trainer) for [Megabonk](https://store.steampowered.com/app/3405340/Megabonk) game.
+  - `Il2Cpp` Backend.
+  - Using Unity `2023.2.22f1`.
+
 - [MonstersAreComing-Trainer](https://github.com/sailro/MonstersAreComing-Trainer) for [Monsters Are Coming](https://store.steampowered.com/app/2934220/Monsters_are_Coming_Rock__Road/) game.
   - `Il2Cpp` Backend.
   - New Input System.
